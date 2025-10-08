@@ -1,0 +1,34 @@
+use regex::Regex;
+use rig::{
+    client::CompletionClient,
+    completion::Prompt,
+    providers::openai,
+};
+
+//处理响应，移除<think>标签
+fn process_response(resp: String) -> String {
+    let re = Regex::new(r"<think>\s*</think>\s*").unwrap();
+    re.replace_all(&resp, "").to_string()
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let client = openai::Client::builder("")
+        .base_url("http://localhost:1234/v1")
+        .build()?;
+    let model = client.completion_model("qwen3-8b");
+    let agent = model
+        .completions_api()
+        .into_agent_builder()
+        .context("你是优秀的全能个人助手")
+        .context("每次回答的内容会在80到120个字符之间")
+        .context("回答内容口语化处理，不能带有emoji符号,变成一句话返回")
+        .build();
+
+    let resp = process_response(agent.prompt("你好//no_think").await?);
+    println!("{:?}", resp);
+    let resp = process_response(agent.prompt("写一首关于秋天的诗词//no_think").await?);
+    println!("{:?}", resp);
+    Ok(())
+}
+curl -XPOST "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" -H "Authorization:Bearersk-24cc6b376bed4063b983c8feb3927d28" -H "Content-Type:application/json" -d '{"model":"qwen-plus","messages":[{"role":"user","content":"你好"}]}
